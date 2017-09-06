@@ -69,9 +69,58 @@
         <input v-model="circle.name" v-on:change="change(circle)" required />
       </div>
     </div>
-    <button class="add" v-on:click="add">+1</button>
+    <button class="add" v-on:click="add" v-if="showPlus">+1</button>
   </div>
   <script>
+    function getCoord(length, index) {
+      if (length === 12) {
+        var results = [{
+          x: 80,
+          y: 250
+        }, {
+          x: 190,
+          y: 60
+        }, {
+          x: 250,
+          y: 250          
+        }, {
+          x: 190,
+          y: 430          
+        }, {
+          x: 350,
+          y: 60
+        }, {
+          x: 350,
+          y: 430
+        }, {
+          x: 510,
+          y: 60
+        }, {
+          x: 600,
+          y: 250
+        }, {
+          x: 510,
+          y: 430
+        }, {
+          x: 690,
+          y: 60
+        }, {
+          x: 690,
+          y: 430
+        }, {
+          x: 770,
+          y: 250          
+        }]
+
+        return results[index];
+      }
+
+      return {
+        x: Math.ceil(Math.random() * 880),
+        y: Math.ceil(Math.random() * 560)
+      }
+    }
+
     firebase.initializeApp({
       apiKey: 'AIzaSyDvXcCFYLj4_ye_oF8bD5QoJmKOYP0ohHE',
       authDomain: 'fulbito-6b954.firebaseapp.com',
@@ -85,15 +134,22 @@
 
     firebase.auth().signInAnonymously();
 
-    var id = getParameterByName('id');
+    var players = getParameterByName('player');
+    var id = getParameterByName('id')[0];
 
-    var match = firebase.database().ref('matches/' + id + '/players');
+    if (!id) {
+      throw new Error('id is required');
+    }
+
+    var matchId = id + '@' + players.join('+');
+
+    var match = firebase.database().ref('matches/' + matchId);
 
     match.on('value', function(snapshot) {
       const value = snapshot.val();
 
       if (!value) {
-        firebase.database().ref('matches/' + id + '/players')
+        firebase.database().ref('matches/' + matchId)
           .set([]);
       }
 
@@ -101,13 +157,22 @@
         app = new Vue({
           el: '#app',
           data: {
+            showPlus: !players.length,
             circles: {
-              values: value || []
+              values: value || players.map((player, index) => {
+                var coord = getCoord(players.length, index);
+
+                return {
+                  x: coord.x,
+                  y: coord.y,
+                  name: player
+                }
+              })
             }
           },
           methods: {
             change: function (circle) {
-              firebase.database().ref('matches/' + id + '/players')
+              firebase.database().ref('matches/' + matchId)
                 .set(this.circles.values);          
             },
             add: function () {
@@ -118,7 +183,7 @@
 
               this.circles.values.push(circle);
 
-              firebase.database().ref('matches/' + id + '/players')
+              firebase.database().ref('matches/' + matchId)
                 .set(this.circles.values);          
             },
             drag: function (ev, circle) {
@@ -126,7 +191,7 @@
                 circle.x = ev.x - 25;
                 circle.y = ev.y - 25;
 
-                firebase.database().ref('matches/' + id + '/players')
+                firebase.database().ref('matches/' + matchId)
                   .set(this.circles.values);
               }
             }
@@ -143,21 +208,20 @@
       if (!url) {
         url = window.location.href;
       }
+      var results = [];
 
       name = name.replace(/[\[\]]/g, "\\$&");
 
-      var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)");
-      var results = regex.exec(url);
+      var regex = new RegExp('[?&]' + name + '(=([^&#]*)|&|#|$)', 'g');
+      var result;
 
-      if (!results) {
-        return null;
+      while (result = regex.exec(url)) {
+        if (result[2]) {
+          results.push(decodeURIComponent(result[2].replace(/\+/g, " ")));
+        }
       }
 
-      if (!results[2]) {
-        return '';
-      }
-
-      return decodeURIComponent(results[2].replace(/\+/g, " "));
+      return results;
     }
   </script>
 </body>
