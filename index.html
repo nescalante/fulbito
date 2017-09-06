@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    .circle > div {
+      position: fixed;
+      z-index: 1;
+      display: none;
+    }
+
+    .circle > div svg {
+      position: fixed;
+    }
+
+    .circle > div input {
+      position: relative;
+      top: 55px;
+      left: -25px;
+      width: 100px;
+      text-align: center;
+      vertical-align: middle;
+      border: 0;
+      background-color: transparent;
+      font-size: 16px;
+    }
+
+    .circle > div input:invalid {
+      border: 1px solid red;
+    }
+
+    .add {
+      margin: 20px;
+      padding: 10px;
+      border: 1px solid black;
+      font-size: 18px;
+    }
+  </style>
+  <script src="https://vuejs.org/js/vue.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/4.2.0/firebase.js"></script>
+</head>
+<body>
+  <div id="app">
+    <div id="field">
+      <svg width="880px" height="560px" viewBox="0 0 1150 720" stroke="black" version="1.1" xmlns="http://www.w3.org/2000/svg" draggable="false">
+        <path d="M 575,20 L 50,20 50,700 1100,700 1100,20 575,20 575,700 z" stroke="black" stroke-width="2" fill="white" />
+        <circle cx="575" cy="360" r="91.5" stroke="black" stroke-width="2" fill-opacity="0" />
+        <circle cx="575" cy="360" r="2" stroke="black" fill="black" />
+        <circle cx="160" cy="360" r="2" stroke="black" fill="black" />
+        <circle cx="990" cy="360" r="2" stroke="black" fill="black" />
+        <path d="M 50,324.4 L 40,324.4 40, 396.6 50 396.6 z" stroke="black" stroke-width="2" fill-opacity="0" />
+        <path d="M 1100,324.4 L 1110,324.4 1110,396.6 1100,396.6 z" stroke="black" stroke-width="2" fill-opacity="0" />
+        <path d="M 50,269.4 L 105,269.4 105,451.6 50 451.6 z" stroke="black" stroke-width="2" fill-opacity="0" />
+        <path d="M 1100,269.4 L 1045,269.4 1045,451.6 1100,451.6 z" stroke="black" stroke-width="2" fill-opacity="0" />
+        <path d="M 50,159.4 L 215,159.4 215,561.6 50 561.6 z" stroke="black" stroke-width="2" fill-opacity="0" />
+        <path d="M 1100,159.4 L 935,159.4 935,561.6 1100,561.6 z" stroke="black" stroke-width="2" fill-opacity="0" />
+        <path d="M 215,286.875 A 91.5,91.5 0 0,1 215,433.125 z" stroke="black" stroke-width="2" fill="white" />
+        <path d="M 935,286.875 A 91.5,91.5 0 0,0 935,433.125 z" stroke="black" stroke-width="2" fill="white" />
+        <path d="M 50,30 A 10,10 0 0,0 60,20 L 50,20 z" stroke="black" stroke-width="2" fill-opacity="0" />
+        <path d="M 60,700 A 10,10 0 0,0 50,690 L 50,700 z" stroke="black" stroke-width="2" fill-opacity="0" />
+        <path d="M 1100,690 A 10,10 0 0,0 1090,700 L 1100,700 z" stroke="black" stroke-width="2" fill-opacity="0" />
+        <path d="M 1090,20 A 10,10 0 0,0 1100,30 L 1100,20 z" stroke="black" stroke-width="2" fill-opacity="0" />
+      </svg>
+    </div>
+    <div v-for="circle in circles.values" draggable class="circle" v-on:drag="drag(event, circle)">
+      <div v-bind:style="{ left: circle.x + 'px', top: circle.y + 'px', display: 'block' }">
+        <svg height="50px" width="50px">
+          <circle cx="25" cy="25" r="20" stroke="black" stroke-width="3" fill="red" />
+        </svg>
+        <input v-model="circle.name" v-on:change="change(circle)" required />
+      </div>
+    </div>
+    <button class="add" v-on:click="add">+1</button>
+  </div>
+  <script>
+    firebase.initializeApp({
+      apiKey: 'AIzaSyDvXcCFYLj4_ye_oF8bD5QoJmKOYP0ohHE',
+      authDomain: 'fulbito-6b954.firebaseapp.com',
+      databaseURL: 'https://fulbito-6b954.firebaseio.com',
+      projectId: 'fulbito-6b954',
+      storageBucket: 'fulbito-6b954.appspot.com',
+      messagingSenderId: '896944253084'
+    });
+
+    var app;
+
+    firebase.auth().signInAnonymously();
+
+    var id = getParameterByName('id');
+
+    var match = firebase.database().ref('matches/' + id + '/players');
+
+    match.on('value', function(snapshot) {
+      const value = snapshot.val();
+
+      if (!value) {
+        firebase.database().ref('matches/' + id + '/players')
+          .set([]);
+      }
+
+      if (!app) {
+        app = new Vue({
+          el: '#app',
+          data: {
+            circles: {
+              values: value || []
+            }
+          },
+          methods: {
+            change: function (circle) {
+              firebase.database().ref('matches/' + id + '/players')
+                .set(this.circles.values);          
+            },
+            add: function () {
+              var circle = {
+                x: Math.ceil(Math.random() * 880),
+                y: Math.ceil(Math.random() * 560)
+              };
+
+              this.circles.values.push(circle);
+
+              firebase.database().ref('matches/' + id + '/players')
+                .set(this.circles.values);          
+            },
+            drag: function (ev, circle) {
+              if (ev.x !== 0 && ev.y !== 0) {
+                circle.x = ev.x - 25;
+                circle.y = ev.y - 25;
+
+                firebase.database().ref('matches/' + id + '/players')
+                  .set(this.circles.values);
+              }
+            }
+          }
+        });
+
+      } else {
+        Vue.set(app.circles, 'values', value);
+      }
+
+    });
+
+    function getParameterByName(name, url) {
+      if (!url) {
+        url = window.location.href;
+      }
+
+      name = name.replace(/[\[\]]/g, "\\$&");
+
+      var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)");
+      var results = regex.exec(url);
+
+      if (!results) {
+        return null;
+      }
+
+      if (!results[2]) {
+        return '';
+      }
+
+      return decodeURIComponent(results[2].replace(/\+/g, " "));
+    }
+  </script>
+</body>
+</html>
